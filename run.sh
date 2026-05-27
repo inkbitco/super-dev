@@ -1,5 +1,5 @@
 #!/bin/bash
-# Wrapper to launch super-dev-mcp with the correct node version.
+# Wrapper to launch super-dev with the correct node version.
 # Works regardless of nvm/fnm/volta setup, even when launched from a GUI app.
 DIR="$(cd "$(dirname "$0")" && pwd)"
 

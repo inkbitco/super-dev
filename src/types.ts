@@ -1,4 +1,4 @@
-// Shared type definitions for super-dev-mcp.
+// Shared type definitions for super-dev.
 
 import type { z } from "zod";
 

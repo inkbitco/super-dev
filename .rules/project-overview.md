@@ -3,7 +3,7 @@ inclusion: always
 description: Project architecture, build pipeline, and key abstractions
 ---
 
-# super-dev-mcp
+# super-dev
 
 MCP server providing spec-driven development workflow tools, thread history, TTS voice mode, and upstream merge management for AI agents in Zed.
 

@@ -1,11 +1,11 @@
 <p align="center">
-  <img src=".github/logo.png" alt="Super Dev MCP" width="500">
+  <img src=".github/logo.png" alt="Super Dev" width="500">
 </p>
 <p align="center">
   Give your dev workflow super powers.
 </p>
 
-An [MCP server](https://modelcontextprotocol.io/) that plugs into **Zed**, **Claude Desktop**, **Cursor**, or any MCP client, adding structured planning, deep code review, and design workflows on top of your AI coding agent.
+Super Dev is an [MCP server](https://modelcontextprotocol.io/) that plugs into **Zed**, **Claude Desktop**, **Cursor**, or any MCP client, adding structured planning, deep code review, and design workflows on top of your AI coding agent.
 
 🔨 **Spec-driven development**: go from idea to implementation with structured requirements → design → tasks phases
 
@@ -26,8 +26,8 @@ An [MCP server](https://modelcontextprotocol.io/) that plugs into **Zed**, **Cla
 ## Quick Start
 
 ```bash
-git clone https://github.com/inkbitco/super-dev-mcp.git
-cd super-dev-mcp
+git clone https://github.com/inkbitco/super-dev.git
+cd super-dev
 npm install
 ```
 
@@ -43,7 +43,7 @@ Add to your project's `.zed/settings.json`:
 {
   "context_servers": {
     "super-dev": {
-      "command": "/path/to/super-dev-mcp/run.sh",
+      "command": "/path/to/super-dev/run.sh",
       "args": []
     }
   }
@@ -52,7 +52,7 @@ Add to your project's `.zed/settings.json`:
 
 ### Claude Desktop / Other MCP Clients
 
-Point the client at `run.sh`, or directly at `node /path/to/super-dev-mcp/dist/index.js`.
+Point the client at `run.sh`, or directly at `node /path/to/super-dev/dist/index.js`.
 
 > **Why `run.sh`?** GUI-launched editors don't inherit your shell's nvm/fnm setup. The wrapper sources your shell profile so Node resolves correctly.
 
@@ -72,7 +72,7 @@ All features are enabled by default. Disable what you don't need with the `SUPER
 {
   "context_servers": {
     "super-dev": {
-      "command": "/path/to/super-dev-mcp/run.sh",
+      "command": "/path/to/super-dev/run.sh",
       "env": {
         "SUPER_DEV_DISABLE": "voice,upstream,threads"
       }

@@ -76,7 +76,7 @@ export function createDeprecationWatch(
       notice([
         `🎉 ${client.name} (v${client.version || "?"}) is now using MCP Resources!`,
         ``,
-        `The \`load_rules\` tool in super-dev-mcp may now be redundant —`,
+        `The \`load_rules\` tool in super-dev may now be redundant —`,
         `${client.name} can read rules directly via the \`rule://\` resources we expose.`,
         ``,
         `To clean up:`,

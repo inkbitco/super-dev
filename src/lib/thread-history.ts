@@ -68,7 +68,9 @@ function readThreadData(threadId: string): ThreadData & { title?: string } {
   return JSON.parse(content) as ThreadData & { title?: string };
 }
 
-function extractThreadText(threadData: ThreadData & { title?: string }): string {
+function extractThreadText(
+  threadData: ThreadData & { title?: string },
+): string {
   const parts: string[] = [];
   if (threadData.title) {
     parts.push(`# ${threadData.title}`);
@@ -148,7 +150,7 @@ const threadListSchema = {
     .optional()
     .describe(
       "Filter threads to those used in a specific project folder path " +
-        "(substring match on folder_paths). E.g. 'kowiki' or 'super-dev-mcp'",
+        "(substring match on folder_paths). E.g. 'kowiki' or 'super-dev'",
     ),
   search: z
     .string()
@@ -258,7 +260,10 @@ export const threadHistoryTools: ToolDef[] = [
       if (!raw) {
         return {
           content: [
-            { type: "text" as const, text: "No threads found matching your criteria." },
+            {
+              type: "text" as const,
+              text: "No threads found matching your criteria.",
+            },
           ],
         };
       }
@@ -309,7 +314,9 @@ export const threadHistoryTools: ToolDef[] = [
 
       if (!raw) {
         return {
-          content: [{ type: "text" as const, text: "No threads found to search." }],
+          content: [
+            { type: "text" as const, text: "No threads found to search." },
+          ],
         };
       }
 
