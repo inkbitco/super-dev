@@ -11,7 +11,12 @@ import { z } from "zod";
 import type { AppContext } from "./types.js";
 import { createDeprecationWatch } from "./lib/deprecation-watch.js";
 import { listAllRules, readRule, rulesTools } from "./lib/rules.js";
-import { specTools } from "./lib/spec-tools.js";
+import {
+  specTools,
+  specAnalyze,
+  specAnalyzeSchema,
+  anySpecInPhase,
+} from "./lib/spec-tools.js";
 import { threadHistoryTools } from "./lib/thread-history.js";
 import { ttsTools } from "./lib/tts-tools.js";
 import { upstreamTools } from "./lib/upstream-tools.js";
@@ -33,6 +38,7 @@ const TOOL_GROUPS: Record<string, string> = {
   spec_status: "spec",
   spec_approve: "spec",
   spec_task_complete: "spec",
+  spec_analyze: "spec",
   load_rules: "rules",
   thread_list: "threads",
   thread_read: "threads",
@@ -211,9 +217,36 @@ function syncMergeToolVisibility(): void {
   }
 }
 
+// --- spec_analyze: dynamic visibility (hidden until a spec is in requirements phase) ---
+const PHASE_CHANGING_SPEC_TOOLS = new Set([
+  "spec_create",
+  "spec_status",
+  "spec_approve",
+]);
+
+let _analyzeHandle: { enable(): void; disable(): void } | null = null;
+let _analyzeEnabled = false;
+
+function syncAnalyzeVisibility(): void {
+  if (!_analyzeHandle) return;
+  const shouldEnable = anySpecInPhase(ctx.projectRoot, "requirements");
+  if (shouldEnable && !_analyzeEnabled) {
+    _analyzeHandle.enable();
+    _analyzeEnabled = true;
+  } else if (!shouldEnable && _analyzeEnabled) {
+    _analyzeHandle.disable();
+    _analyzeEnabled = false;
+  }
+}
+
 // Tools that need the project root resolved before running.
 for (const tool of [...specTools, ...rulesTools]) {
   if (!isToolEnabled(tool.name)) continue;
+
+  // spec_analyze is registered separately with dynamic visibility
+  if (tool.name === "spec_analyze") continue;
+
+  const needsVisibilitySync = PHASE_CHANGING_SPEC_TOOLS.has(tool.name);
 
   server.registerTool(
     tool.name,
@@ -223,9 +256,29 @@ for (const tool of [...specTools, ...rulesTools]) {
     },
     async (args) => {
       await resolveProjectRoot();
-      return tool.handler(args as Record<string, unknown>, ctx) as any;
+      const result = await tool.handler(args as Record<string, unknown>, ctx);
+      if (needsVisibilitySync) syncAnalyzeVisibility();
+      return result as any;
     },
   );
+}
+
+// Register spec_analyze as disabled-by-default
+if (isToolEnabled("spec_analyze")) {
+  const handle = server.registerTool(
+    "spec_analyze",
+    {
+      description:
+        "Analyze requirements for ambiguity, conflicts, completeness gaps, solution leakage, and testability. Returns requirements content with an analysis rubric for the agent to follow. Use during requirements phase before approval.",
+      inputSchema: specAnalyzeSchema,
+    },
+    async (args) => {
+      await resolveProjectRoot();
+      return specAnalyze(args as Record<string, unknown>, ctx) as any;
+    },
+  );
+  handle.disable();
+  _analyzeHandle = handle;
 }
 
 // Tools that do NOT need the project root.

@@ -52,7 +52,34 @@ When I describe a feature:
 - Read `.specs/<name>/requirements.md`
 - Edit it to define numbered functional requirements, non-functional requirements (performance, security, accessibility), and out-of-scope items
 - Ask clarifying questions until requirements are unambiguous
-- **Show me the requirements and explicitly ask "ready to approve?"** Do not advance without my confirmation.
+
+#### EARS Notation
+
+Write acceptance criteria using EARS (Easy Approach to Requirements Syntax). Each criterion must name a trigger/precondition, the system, and an observable response using these patterns:
+
+- **Ubiquitous** (always active): `THE [system] SHALL [response]`
+- **Event-driven**: `WHEN [trigger], THE [system] SHALL [response]`
+- **State-driven**: `WHILE [state], THE [system] SHALL [response]`
+- **Unwanted behavior**: `IF [condition], THEN THE [system] SHALL [response]`
+- **Complex**: `WHILE [state], WHEN [trigger], THE [system] SHALL [response]`
+
+Examples:
+- `WHEN a user submits valid credentials, THE auth service SHALL return a session token`
+- `WHILE the system is in maintenance mode, THE API SHALL return 503 for all requests`
+- `IF the requested resource does not exist, THEN THE API SHALL return a 404 error`
+
+#### Requirements Analysis (mandatory before approval)
+
+After drafting requirements, call `spec_analyze({ name })` to load the analysis rubric. Follow the rubric to check for:
+- **Ambiguity**: words with 2+ plausible meanings
+- **Conflicts**: criteria that contradict each other when both activate
+- **Completeness**: missing error paths, edge cases, uncovered input regions
+- **Solution leakage**: implementation details in requirements (describe *what*, not *how*)
+- **Testability**: vague qualifiers without measurable thresholds
+
+Present each finding as an **A/B question** (A = keep as-is, B = specific revision). After the user answers, rewrite the affected criteria and call `spec_analyze` again. **Repeat until no findings remain.**
+
+- **Show me the final requirements and explicitly ask "ready to approve?"** Do not advance without my confirmation.
 - When I confirm, call `spec_approve({ name, phase: "requirements" })`
 
 ### 2. Design Phase

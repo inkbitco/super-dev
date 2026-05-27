@@ -83,7 +83,7 @@ All features are enabled by default. Disable what you don't need with the `SUPER
 
 | Group | Tools | Prompts |
 |-------|-------|--------|
-| `spec` | spec_create, spec_read, spec_status, spec_approve, spec_task_complete | /spec-plan, /spec-execute |
+| `spec` | spec_create, spec_read, spec_status, spec_approve, spec_task_complete, spec_analyze | /spec-plan, /spec-execute |
 | `review` | — | /code-review |
 | `design` | — | /design, /design-review |
 | `rules` | load_rules + rule:// resources | — |
@@ -114,6 +114,7 @@ All features are enabled by default. Disable what you don't need with the `SUPER
 | `spec_status` | List all specs or get details on one |
 | `spec_approve` | Approve current phase and advance to the next |
 | `spec_task_complete` | Mark a task complete; parent tasks auto-commit |
+| `spec_analyze` | Analyze requirements for quality issues (ambiguity, conflicts, completeness, testability) |
 | `load_rules` | Load project rules from `.rules/` with glob-based auto-matching |
 | `thread_list` | List recent Zed agent conversation threads |
 | `thread_read` | Read a thread by ID with pagination and search |
@@ -137,7 +138,7 @@ Go from a rough idea to shipped code with structured phases and approval gates.
 
 1. **`/spec-plan`**: describe your feature. The agent pressure-tests the idea, does web research, and helps you think through edge cases before any code is written.
 2. **`spec_create`**: scaffolds `.specs/<feature>/` in your project with `requirements.md`, `design.md`, `tasks.md`, and `state.json`.
-3. **Requirements → Design → Tasks**: each phase must be explicitly approved before the next unlocks. The agent guides you through each one with phase-specific instructions.
+3. **Requirements → Design → Tasks**: each phase must be explicitly approved before the next unlocks. During the requirements phase, `spec_analyze` checks for ambiguity, conflicts, completeness gaps, solution leakage, and testability — surfacing findings as A/B questions you answer before approval.
 4. **`/spec-execute`**: orchestrates implementation by delegating tasks to sub-agents. The main thread stays clean for coordination while sub-agents do the coding.
 5. **Auto-commit**: when a parent task is marked complete, the agent automatically commits the work with a conventional commit message. Opt out per-spec with `autoCommit: false`.
 
@@ -246,7 +247,7 @@ A few deliberate design choices:
 
 **Minimal tool surface.** MCP tools consume context window and decision-making overhead for the agent. Every always-visible tool has to justify its presence. Related actions are consolidated into single tools with optional parameters (e.g. `upstream_status` handles init, status checks, and merge starts) rather than exposing three separate tools.
 
-**Progressive tool exposure.** Tools that only make sense during a specific workflow are hidden until needed. The 7 upstream merge-resolution tools only appear after a merge is started, then disappear when it completes or aborts. This keeps the agent focused.
+**Progressive tool exposure.** Tools that only make sense during a specific workflow are hidden until needed. The 7 upstream merge-resolution tools only appear after a merge is started, then disappear when it completes or aborts. Similarly, `spec_analyze` only appears when a spec is in the requirements phase. This keeps the agent focused.
 
 **Consolidated prompts.** Slash commands are kept to a minimum by combining related workflows. `/design` handles both building new UI and refining existing surfaces rather than splitting into separate build/polish/setup commands. The agent figures out the mode from context.
 

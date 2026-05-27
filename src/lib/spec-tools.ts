@@ -256,7 +256,7 @@ export async function specCreate(
 
   writeFileSync(
     join(dir, "requirements.md"),
-    `# Requirements: ${name}\n\n${description}\n\n## Functional Requirements\n\n- [ ] 1. (describe requirement)\n\n## Non-Functional Requirements\n\n- [ ] (performance, security, accessibility)\n\n## Out of Scope\n\n- (what we're not doing)\n`,
+    `# Requirements: ${name}\n\n${description}\n\n## Functional Requirements\n\n### Story 1: As a [role], I want [goal], so that [benefit]\n\n**Acceptance Criteria:**\n- [ ] 1.1 WHEN [trigger], THE [system] SHALL [response]\n- [ ] 1.2 IF [condition], THEN THE [system] SHALL [response]\n\n<!-- EARS Pattern Reference:\n  Ubiquitous (always active): THE [system] SHALL [response]\n  Event-driven:              WHEN [trigger], THE [system] SHALL [response]\n  State-driven:              WHILE [state], THE [system] SHALL [response]\n  Unwanted behavior:         IF [condition], THEN THE [system] SHALL [response]\n  Optional feature:          WHERE [feature], THE [system] SHALL [response]\n  Complex:                   WHILE [state], WHEN [trigger], THE [system] SHALL [response]\n-->\n\n## Non-Functional Requirements\n\n- [ ] (performance, security, accessibility)\n\n## Out of Scope\n\n- (what we're not doing)\n`,
   );
 
   writeFileSync(
@@ -547,6 +547,135 @@ export async function specRead(
 }
 
 // ---------------------------------------------------------------------------
+// Requirements analysis
+// ---------------------------------------------------------------------------
+
+const ANALYSIS_RUBRIC = `
+## Requirements Analysis Rubric
+
+You are analyzing a requirements document. Perform the following five checks in order.
+For each finding, present a binary A/B question to the user.
+
+### Check 1: Ambiguity
+Scan each acceptance criterion for words or phrases with 2+ plausible interpretations.
+
+Common ambiguity triggers: "remove", "handle", "process", "manage", "appropriate", "ensure",
+"support", "properly", "relevant", "necessary", "as needed", "efficient", "flexible"
+
+For each ambiguous term: state the criterion, explain the two interpretations, and ask:
+- **A)** Keep as-is: [what the current wording implies]
+- **B)** Change to: [specific revised wording that resolves the ambiguity]
+
+### Check 2: Conflicts
+Compare pairs of criteria whose triggers (WHEN/WHILE/IF conditions) can co-activate.
+Look for cases where the required responses contradict each other.
+
+Pay special attention to ubiquitous criteria (bare SHALL with no WHEN/WHILE/IF) —
+they apply in ALL situations and can conflict with any event-driven or state-driven criterion.
+
+For each conflict: state both criteria, explain the scenario where they conflict, and ask:
+- **A)** Keep as-is: [which criterion wins by default]
+- **B)** Change to: [how to narrow one criterion to resolve the conflict]
+
+### Check 3: Completeness
+For each WHEN trigger, ask: what happens when the opposite condition is true?
+Is there a criterion covering that case?
+
+Look for missing paths:
+- Invalid or malformed input
+- Entity not found / does not exist
+- Unauthorized access
+- Empty states (no items, no data)
+- Concurrent modifications
+- User cancellation or interruption
+- Boundary values (zero, empty string, maximum)
+
+For each gap: describe the uncovered scenario and ask:
+- **A)** Keep as-is: silence is intentional (no behavior needed for this case)
+- **B)** Add criterion: [specific new EARS criterion to cover the gap]
+
+### Check 4: Solution Leakage
+Scan for implementation details masquerading as requirements.
+
+Red flags: specific technologies ("use JWT", "store in Redis"), algorithms
+("implement soft deletion"), internal mechanisms ("retry with exponential backoff"),
+data structures ("use a hash map"), architecture choices ("use a microservice")
+
+Requirements should describe observable behavior, not mechanism.
+
+For each finding: state the criterion, explain what's prescriptive, and ask:
+- **A)** Keep as-is: the implementation detail is an intentional constraint
+- **B)** Change to: [rewritten criterion describing observable behavior only]
+
+### Check 5: Testability
+Scan for vague qualifiers with no measurable threshold.
+
+Red flags: "quickly", "efficiently", "user-friendly", "securely", "appropriately",
+"reasonable", "performant", "scalable", "robust", "intuitive", "seamless"
+
+Also check for criteria that don't name an observable output or measurable condition.
+
+For each finding: state the criterion, explain what's unmeasurable, and ask:
+- **A)** Keep as-is: the vague qualifier is acceptable for this context
+- **B)** Change to: [rewritten criterion with a specific threshold or observable condition]
+
+### Output Format
+
+Present your findings as:
+
+## Requirements Analysis Findings
+
+### Finding 1: [Category] — [short description]
+**Criterion:** [quote the affected criterion]
+**Issue:** [explain the problem]
+
+**A)** Keep as-is: [what this means]
+**B)** Change to: [specific proposed revision]
+
+### Finding 2: ...
+(continue for all findings)
+
+---
+
+If no findings across all five checks, output:
+"✅ No issues found. Requirements are ready for approval."
+
+Then proceed to show the user the requirements and ask "ready to approve?"
+`.trim();
+
+export const specAnalyzeSchema = {
+  name: z.string().describe("Spec name to analyze"),
+};
+
+export async function specAnalyze(
+  { name }: { name: string },
+  { projectRoot }: AppContext,
+): Promise<ToolResult> {
+  const state = loadState(projectRoot, name);
+  if (!state) return err(`Spec '${name}' not found.`);
+
+  const reqFile = join(specPath(projectRoot, name), "requirements.md");
+  if (!existsSync(reqFile)) {
+    return err(`requirements.md not found for spec '${name}'.`);
+  }
+
+  const content = readFileSync(reqFile, "utf-8");
+
+  return ok(
+    `--- requirements.md ---\n${content}\n\n--- Analysis Rubric ---\n${ANALYSIS_RUBRIC}`,
+  );
+}
+
+export function anySpecInPhase(projectRoot: string, phase: SpecPhase): boolean {
+  const root = specsRoot(projectRoot);
+  if (!existsSync(root)) return false;
+  return readdirSync(root).some((d) => {
+    const state = loadState(projectRoot, d);
+    return state?.phase === phase;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Tool definitions
 // ---------------------------------------------------------------------------
 
@@ -585,5 +714,12 @@ export const specTools: ToolDef[] = [
       "Mark a task complete in tasks.md. Parent tasks auto-commit (and require all children done first).",
     schema: specTaskCompleteSchema,
     handler: specTaskComplete as ToolDef["handler"],
+  },
+  {
+    name: "spec_analyze",
+    description:
+      "Analyze requirements for ambiguity, conflicts, completeness gaps, solution leakage, and testability. Returns requirements content with an analysis rubric for the agent to follow. Use during requirements phase before approval.",
+    schema: specAnalyzeSchema,
+    handler: specAnalyze as ToolDef["handler"],
   },
 ];
