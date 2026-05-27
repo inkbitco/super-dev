@@ -131,11 +131,7 @@ for (const file of promptFiles) {
 }
 
 // --- Tools ---
-const UPSTREAM_ALWAYS_VISIBLE = new Set([
-  "upstream_init",
-  "upstream_status",
-  "upstream_merge_start",
-]);
+const UPSTREAM_ALWAYS_VISIBLE = new Set(["upstream_status"]);
 const mergeToolHandles: Array<{ enable(): void; disable(): void }> = [];
 let _mergeToolsEnabled = false;
 
@@ -189,11 +185,13 @@ for (const tool of upstreamTools) {
   const isMergeOnly = !UPSTREAM_ALWAYS_VISIBLE.has(tool.name);
 
   let wrappedHandler: (args: Record<string, unknown>) => Promise<any>;
-  if (tool.name === "upstream_merge_start") {
+  if (tool.name === "upstream_status") {
     wrappedHandler = async (args) => {
       await resolveProjectRoot();
-      const result = await tool.handler(args, ctx);
-      enableMergeTools();
+      syncMergeToolVisibility();
+      const result = await tool.handler(args as Record<string, unknown>, ctx);
+      // If start_merge was used, enable merge tools
+      if (args.start_merge) enableMergeTools();
       return result;
     };
   } else if (
@@ -205,12 +203,6 @@ for (const tool of upstreamTools) {
       const result = await tool.handler(args, ctx);
       disableMergeTools();
       return result;
-    };
-  } else if (UPSTREAM_ALWAYS_VISIBLE.has(tool.name)) {
-    wrappedHandler = async (args) => {
-      await resolveProjectRoot();
-      syncMergeToolVisibility();
-      return tool.handler(args, ctx);
     };
   } else {
     wrappedHandler = async (args) => {

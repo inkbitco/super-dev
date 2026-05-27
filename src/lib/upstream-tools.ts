@@ -125,97 +125,223 @@ function git(
   ).trim();
 }
 
-const upstreamInitSchema = {
-  remote: z.string().default("upstream"),
-  remote_url: z.string().describe("Git URL of the upstream repository"),
-  branch: z.string().default("main"),
+const upstreamStatusSchema = {
+  // Init params — only needed when setting up for the first time
+  remote_url: z
+    .string()
+    .optional()
+    .describe(
+      "Git URL of the upstream repository. Provide this to initialize upstream config (.upstream.json). Only needed once.",
+    ),
+  remote: z.string().optional().describe("Git remote name (default: upstream)"),
+  branch: z
+    .string()
+    .optional()
+    .describe("Upstream branch to track (default: main)"),
   policies: z.record(z.array(z.string())).optional(),
   categories: z.record(z.array(z.string())).optional(),
-};
-
-async function upstreamInit(
-  args: Record<string, unknown>,
-  { projectRoot }: AppContext,
-): Promise<ToolResult> {
-  const { remote, remote_url, branch, policies, categories } = args as {
-    remote: string;
-    remote_url: string;
-    branch: string;
-    policies?: Record<string, string[]>;
-    categories?: Record<string, string[]>;
-  };
-
-  try {
-    let remoteExists = false;
-    try {
-      git(`git remote get-url ${remote}`, projectRoot);
-      remoteExists = true;
-    } catch {
-      // Remote doesn't exist
-    }
-
-    if (!remoteExists) {
-      git(`git remote add ${remote} ${remote_url}`, projectRoot);
-    }
-
-    git(`git fetch ${remote}`, projectRoot);
-
-    const config: UpstreamConfig = {
-      remote,
-      branch,
-      policies: (policies as unknown as UpstreamPolicies) || {
-        always_ours: [],
-        always_theirs: [],
-        manual_review: [],
-      },
-      categories: categories || {
-        dependencies: [
-          "package.json",
-          "package-lock.json",
-          "pnpm-lock.yaml",
-          "yarn.lock",
-        ],
-        ui_components: ["src/components/**"],
-        infrastructure: ["*.config.*", "tsconfig.*", ".env*"],
-      },
-    };
-
-    const configPath = join(projectRoot, ".upstream.json");
-    writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
-
-    return ok(
-      `Upstream configured successfully!\n\n` +
-        `Remote: ${remote} → ${remote_url}${remoteExists ? " (already existed)" : ""}\n` +
-        `Branch: ${branch}\n` +
-        `Config written to: .upstream.json\n\n` +
-        `Suggestion: Add .upstream-merge-state.json to your .gitignore`,
-    );
-  } catch (e: unknown) {
-    return err(
-      `Failed to initialize upstream: ${e instanceof Error ? e.message : String(e)}`,
-    );
-  }
-}
-
-const upstreamStatusSchema = {
+  // Status params
   verbose: z.boolean().optional(),
+  // Merge params
+  start_merge: z
+    .boolean()
+    .optional()
+    .describe("Set to true to start a merge on a new branch"),
+  strategy: z
+    .enum(["merge", "rebase"])
+    .optional()
+    .describe("Merge strategy (default: merge). Only used with start_merge."),
 };
 
 async function upstreamStatus(
   args: Record<string, unknown>,
   { projectRoot }: AppContext,
 ): Promise<ToolResult> {
-  const { verbose } = args as { verbose?: boolean };
+  const {
+    remote_url,
+    remote: remoteArg,
+    branch: branchArg,
+    policies,
+    categories,
+    verbose,
+    start_merge,
+    strategy,
+  } = args as {
+    remote_url?: string;
+    remote?: string;
+    branch?: string;
+    policies?: Record<string, string[]>;
+    categories?: Record<string, string[]>;
+    verbose?: boolean;
+    start_merge?: boolean;
+    strategy?: string;
+  };
 
+  // --- Init mode: remote_url provided ---
+  if (remote_url) {
+    const remote = remoteArg || "upstream";
+    const branch = branchArg || "main";
+
+    try {
+      let remoteExists = false;
+      try {
+        git(`git remote get-url ${remote}`, projectRoot);
+        remoteExists = true;
+      } catch {
+        // Remote doesn't exist
+      }
+
+      if (!remoteExists) {
+        git(`git remote add ${remote} ${remote_url}`, projectRoot);
+      }
+
+      git(`git fetch ${remote}`, projectRoot);
+
+      const config: UpstreamConfig = {
+        remote,
+        branch,
+        policies: (policies as unknown as UpstreamPolicies) || {
+          always_ours: [],
+          always_theirs: [],
+          manual_review: [],
+        },
+        categories: categories || {
+          dependencies: [
+            "package.json",
+            "package-lock.json",
+            "pnpm-lock.yaml",
+            "yarn.lock",
+          ],
+          ui_components: ["src/components/**"],
+          infrastructure: ["*.config.*", "tsconfig.*", ".env*"],
+        },
+      };
+
+      const configPath = join(projectRoot, ".upstream.json");
+      writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
+
+      return ok(
+        `Upstream configured successfully!\n\n` +
+          `Remote: ${remote} → ${remote_url}${remoteExists ? " (already existed)" : ""}\n` +
+          `Branch: ${branch}\n` +
+          `Config written to: .upstream.json\n\n` +
+          `Suggestion: Add .upstream-merge-state.json to your .gitignore`,
+      );
+    } catch (e: unknown) {
+      return err(
+        `Failed to initialize upstream: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  // --- All other modes require existing config ---
   const config = loadConfig(projectRoot);
   if (!config) {
     return err(
-      "No .upstream.json found. Run upstream_init to configure your upstream remote.",
+      "No .upstream.json found. Call upstream_status with remote_url to configure your upstream remote.",
     );
   }
 
   const { remote, branch } = config;
 
+  // --- Merge start mode ---
+  if (start_merge) {
+    try {
+      const status = git("git status --porcelain", projectRoot);
+      if (status) {
+        return err(
+          `Working tree is not clean. Please commit or stash changes first.\n\nDirty files:\n${status}`,
+        );
+      }
+
+      const previousBranch = git("git branch --show-current", projectRoot);
+
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[T:]/g, "-")
+        .replace(/\..+/, "");
+      const mergeBranch = `upstream-merge-${timestamp}`;
+
+      git(`git checkout -b ${mergeBranch}`, projectRoot);
+
+      let hasConflicts = false;
+      try {
+        git(`git merge ${remote}/${branch} --no-commit --no-ff`, projectRoot);
+      } catch {
+        hasConflicts = true;
+      }
+
+      let conflicts: string[] = [];
+      try {
+        const conflictOutput = git(
+          "git diff --name-only --diff-filter=U",
+          projectRoot,
+        );
+        if (conflictOutput) {
+          conflicts = conflictOutput.split("\n").filter(Boolean);
+        }
+      } catch {
+        // No conflicts
+      }
+
+      let allChangedFiles: string[] = [];
+      try {
+        const changedOutput = git(
+          `git diff --name-only HEAD ${remote}/${branch}`,
+          projectRoot,
+        );
+        if (changedOutput) {
+          allChangedFiles = changedOutput.split("\n").filter(Boolean);
+        }
+      } catch {
+        // Fallback
+      }
+
+      const mergeState: MergeState = {
+        branch: mergeBranch,
+        previousBranch,
+        remote,
+        remoteBranch: branch,
+        startedAt: new Date().toISOString(),
+        conflicts,
+        allChangedFiles,
+        resolved: {},
+        status: conflicts.length > 0 ? "in_progress" : "no_conflicts",
+      };
+      saveMergeState(projectRoot, mergeState);
+
+      let output = `## Merge Started\n\n`;
+      output += `Branch: ${mergeBranch}\n`;
+      output += `Strategy: ${strategy || "merge"}\n`;
+      output += `Previous branch: ${previousBranch}\n`;
+      output += `Total files changed: ${allChangedFiles.length}\n`;
+      output += `Conflicts: ${conflicts.length}\n`;
+
+      if (conflicts.length > 0) {
+        output += `\n### Conflicted Files\n\n`;
+        for (const file of conflicts) {
+          const category = categorizeFile(file, config.categories);
+          const policy = getPolicyForFile(file, config.policies);
+          output += `  - ${file}`;
+          if (category) output += ` [${category}]`;
+          if (policy) output += ` (policy: ${policy})`;
+          output += `\n`;
+        }
+        output += `\nUse upstream_categorize_changes for a full breakdown.`;
+        output += `\nUse upstream_resolve_batch to auto-resolve files with policies.`;
+      } else {
+        output += `\n✅ No conflicts! You can run upstream_verify and then upstream_complete.`;
+      }
+
+      return ok(output);
+    } catch (e: unknown) {
+      return err(
+        `Failed to start merge: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  // --- Default: status mode ---
   try {
     git(`git fetch ${remote}`, projectRoot);
 
@@ -268,120 +394,6 @@ async function upstreamStatus(
   }
 }
 
-const upstreamMergeStartSchema = {
-  strategy: z.enum(["merge", "rebase"]).default("merge").optional(),
-};
-
-async function upstreamMergeStart(
-  args: Record<string, unknown>,
-  { projectRoot }: AppContext,
-): Promise<ToolResult> {
-  const { strategy } = args as { strategy?: string };
-
-  const config = loadConfig(projectRoot);
-  if (!config) {
-    return err(
-      "No .upstream.json found. Run upstream_init to configure your upstream remote.",
-    );
-  }
-
-  const { remote, branch } = config;
-
-  try {
-    const status = git("git status --porcelain", projectRoot);
-    if (status) {
-      return err(
-        `Working tree is not clean. Please commit or stash changes first.\n\nDirty files:\n${status}`,
-      );
-    }
-
-    const previousBranch = git("git branch --show-current", projectRoot);
-
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/[T:]/g, "-")
-      .replace(/\..+/, "");
-    const mergeBranch = `upstream-merge-${timestamp}`;
-
-    git(`git checkout -b ${mergeBranch}`, projectRoot);
-
-    let hasConflicts = false;
-    try {
-      git(`git merge ${remote}/${branch} --no-commit --no-ff`, projectRoot);
-    } catch {
-      hasConflicts = true;
-    }
-
-    let conflicts: string[] = [];
-    try {
-      const conflictOutput = git(
-        "git diff --name-only --diff-filter=U",
-        projectRoot,
-      );
-      if (conflictOutput) {
-        conflicts = conflictOutput.split("\n").filter(Boolean);
-      }
-    } catch {
-      // No conflicts
-    }
-
-    let allChangedFiles: string[] = [];
-    try {
-      const changedOutput = git(
-        `git diff --name-only HEAD ${remote}/${branch}`,
-        projectRoot,
-      );
-      if (changedOutput) {
-        allChangedFiles = changedOutput.split("\n").filter(Boolean);
-      }
-    } catch {
-      // Fallback
-    }
-
-    const mergeState: MergeState = {
-      branch: mergeBranch,
-      previousBranch,
-      remote,
-      remoteBranch: branch,
-      startedAt: new Date().toISOString(),
-      conflicts,
-      allChangedFiles,
-      resolved: {},
-      status: conflicts.length > 0 ? "in_progress" : "no_conflicts",
-    };
-    saveMergeState(projectRoot, mergeState);
-
-    let output = `## Merge Started\n\n`;
-    output += `Branch: ${mergeBranch}\n`;
-    output += `Strategy: ${strategy || "merge"}\n`;
-    output += `Previous branch: ${previousBranch}\n`;
-    output += `Total files changed: ${allChangedFiles.length}\n`;
-    output += `Conflicts: ${conflicts.length}\n`;
-
-    if (conflicts.length > 0) {
-      output += `\n### Conflicted Files\n\n`;
-      for (const file of conflicts) {
-        const category = categorizeFile(file, config.categories);
-        const policy = getPolicyForFile(file, config.policies);
-        output += `  - ${file}`;
-        if (category) output += ` [${category}]`;
-        if (policy) output += ` (policy: ${policy})`;
-        output += `\n`;
-      }
-      output += `\nUse upstream_categorize_changes for a full breakdown.`;
-      output += `\nUse upstream_resolve_batch to auto-resolve files with policies.`;
-    } else {
-      output += `\n✅ No conflicts! You can run upstream_verify and then upstream_complete.`;
-    }
-
-    return ok(output);
-  } catch (e: unknown) {
-    return err(
-      `Failed to start merge: ${e instanceof Error ? e.message : String(e)}`,
-    );
-  }
-}
-
 const upstreamCategorizeChangesSchema = {
   include_diff_stats: z.boolean().optional().default(false),
 };
@@ -394,7 +406,7 @@ async function upstreamCategorizeChanges(
 
   const state = loadMergeState(projectRoot);
   if (!state) {
-    return err("No active merge. Run upstream_merge_start first.");
+    return err("No active merge. Call upstream_status with start_merge first.");
   }
 
   const config = loadConfig(projectRoot);
@@ -499,7 +511,7 @@ async function upstreamResolveFile(
 
   const state = loadMergeState(projectRoot);
   if (!state) {
-    return err("No active merge. Run upstream_merge_start first.");
+    return err("No active merge. Call upstream_status with start_merge first.");
   }
 
   try {
@@ -560,7 +572,7 @@ async function upstreamResolveBatch(
 
   const state = loadMergeState(projectRoot);
   if (!state) {
-    return err("No active merge. Run upstream_merge_start first.");
+    return err("No active merge. Call upstream_status with start_merge first.");
   }
 
   const config = loadConfig(projectRoot);
@@ -799,7 +811,7 @@ async function upstreamComplete(
 
   const state = loadMergeState(projectRoot);
   if (!state) {
-    return err("No active merge. Run upstream_merge_start first.");
+    return err("No active merge. Call upstream_status with start_merge first.");
   }
 
   try {
@@ -927,25 +939,11 @@ async function upstreamAbort(
 
 export const upstreamTools: ToolDef[] = [
   {
-    name: "upstream_init",
-    description:
-      "Initialize upstream remote configuration. Sets up .upstream.json with remote, branch, policies, and categories.",
-    schema: upstreamInitSchema,
-    handler: upstreamInit,
-  },
-  {
     name: "upstream_status",
     description:
-      "Check how many commits behind/ahead of upstream, and list pending upstream commits.",
+      "Check how many commits behind/ahead of upstream, and list pending upstream commits. Pass remote_url to initialize config. Pass start_merge to begin a merge.",
     schema: upstreamStatusSchema,
     handler: upstreamStatus,
-  },
-  {
-    name: "upstream_merge_start",
-    description:
-      "Start an upstream merge on a new branch. Identifies conflicts and categorizes changed files by policy.",
-    schema: upstreamMergeStartSchema,
-    handler: upstreamMergeStart,
   },
   {
     name: "upstream_categorize_changes",

@@ -9,7 +9,7 @@ Before starting, ensure the project has an `.upstream.json` config file. If not,
 - The upstream branch to track (usually `main`)
 - Any known customization policies (files to always keep, always take, etc.)
 
-Then call `upstream_init` to set things up.
+Then call `upstream_status` with the `remote_url` to set things up.
 
 ## Workflow
 
@@ -24,7 +24,7 @@ Then call `upstream_init` to set things up.
 
 ### Phase 2: Start Merge
 
-1. Call `upstream_merge_start` to create the merge branch and attempt the merge
+1. Call `upstream_status` with `start_merge: true` to create the merge branch and attempt the merge
 2. If there are conflicts, present them organized by category
 3. Call `upstream_categorize_changes` to get the full picture of ALL changed files
 
@@ -200,6 +200,6 @@ Dependency changes often cascade:
 If anything goes wrong:
 - Call `upstream_abort` to undo everything and return to the previous state
 - The merge branch and state file will be cleaned up
-- You can start fresh with `upstream_merge_start`
+- You can start fresh with `upstream_status` and `start_merge: true`
 
-Begin by checking if `.upstream.json` exists. If not, help the user set it up with `upstream_init`. Then call `upstream_status` to assess what's available upstream.
+Begin by checking if `.upstream.json` exists. If not, help the user set it up with `upstream_status` (passing `remote_url`). Then call `upstream_status` to assess what's available upstream.

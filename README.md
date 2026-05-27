@@ -85,7 +85,7 @@ Markdown files in `prompts/` — each becomes a slash command in your agent pane
 
 **Voice mode** — `voice_mode` — toggle TTS with macOS speech synthesis
 
-**Upstream merge** — `upstream_init` · `upstream_status` · `upstream_merge_start` (+ merge-resolution tools that appear during active merges)
+**Upstream merge** — `upstream_status` (+ merge-resolution tools that appear during active merges)
 
 ## Resources
 
