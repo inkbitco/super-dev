@@ -8,7 +8,7 @@ An [MCP server](https://modelcontextprotocol.io/) that plugs into **Zed**, **Cla
 
 🔍 **Code review** — senior-engineer-style review with web validation
 
-🎨 **Design workflows** — setup, build, review, and polish UI surfaces
+🎨 **Design workflows** — build, refine, and review UI surfaces with design system memory
 
 🧵 **Conversation history** — search and reference past coding sessions
 
@@ -70,10 +70,8 @@ Markdown files in `prompts/` — each becomes a slash command in your agent pane
 | `/spec-plan` | Drive a requirements → design → tasks workflow with idea pressure-testing and web research |
 | `/spec-execute` | Orchestrate implementation using sub-agents for each task |
 | `/code-review` | Senior-engineer-style code review |
-| `/design-setup` | Generate or refresh `PRODUCT.md` and `DESIGN.md` |
-| `/design-build` | Plan and implement a new UI surface |
+| `/design` | Build new UI or refine existing — with design system setup built in |
 | `/design-review` | Design director critique with heuristic scoring |
-| `/design-polish` | Refine existing UI |
 | `/toggle-voice-mode` | Enable/disable TTS voice feedback |
 | `/upstream-merge` | Guided upstream merge workflow |
 

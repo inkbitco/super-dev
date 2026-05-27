@@ -6,13 +6,17 @@ Honest design director critique of an existing UI surface. Find the problems, na
 
 ## Setup
 
-### 1. Read the design memory
+### 1. Design memory
 
-Read `PRODUCT.md` and `DESIGN.md` from the project root if they exist. Quote them when calling out drift. If they're missing, do the review against general best practices and note that running `/design-setup` would let future reviews check against the project's intent.
+Read `PRODUCT.md` and `DESIGN.md` from the project root if they exist. Quote them when calling out drift.
+
+**If either is missing** — do the review against general best practices, but note that running `/design` to create them would make future reviews more precise.
+
+Also call `load_rules()` to pull in any project rules that apply.
 
 ### 2. Identify the target
 
-Ask the user what to review (a route, a component, a file, or "the whole app"). Read the source files. If browser tooling is available, also visually inspect the rendered surface.
+Ask the user what to review (a route, component, file, or "the whole app"). Read the source files. If browser tooling is available, also visually inspect the rendered surface.
 
 ### 3. Identify the register
 
@@ -126,7 +130,7 @@ The 3–5 most impactful problems, ordered by severity. For each:
 - **[P0–P3] What** — name the problem clearly
 - **Why it matters** — how this hurts users or undermines goals
 - **Fix** — what to do about it (be concrete)
-- **Suggested next step** — `/design-polish` direction, or specific code change
+- **Suggested next step** — `/design` direction, or specific code change
 
 P0 = blocks shipping. P1 = significant. P2 = noticeable. P3 = minor.
 
@@ -157,7 +161,7 @@ Ask the user 2–4 targeted questions based on what was actually found:
 
 Every question must reference specific findings. Skip questions if findings are obvious.
 
-After their answers, suggest concrete next steps: `/design-polish` with specific direction, or specific code changes. End with: "Re-run `/design-review` after fixes to see your scores improve."
+After their answers, suggest concrete next steps: `/design` with a specific direction, or specific code changes. End with: "Re-run `/design-review` after fixes to see your scores improve."
 
 ## Rules
 
