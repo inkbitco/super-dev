@@ -1,18 +1,37 @@
 ---
 inclusion: auto
-fileMatchPattern: "src/lib/*.ts"
-description: How to add or modify MCP tools — patterns, schemas, and registration
+fileMatchPattern: "src/**/*.ts, prompts/*.md"
+description: Checklist for adding or modifying MCP tools, prompts, and feature groups
 ---
 
-# MCP Tool Patterns
+# Adding Tools, Prompts, or Features
 
-## Adding a New Tool
+When adding or modifying tools, prompts, or feature groups, update ALL of the following locations. Missing any of these will cause inconsistencies between the code, docs, and configuration.
 
-1. Create or edit a file in `src/lib/`
-2. Export a `ToolDef[]` array (e.g., `export const myTools: ToolDef[] = [...]`)
-3. Register in `src/index.ts` by spreading into the appropriate registration loop
+## Checklist: New Tool
 
-### Tool Definition Shape
+1. **Implementation** — create or edit a file in `src/lib/`, export a `ToolDef[]` array
+2. **Registration** — import and register in `src/index.ts` in the appropriate loop (project-root, standalone, or upstream)
+3. **Feature group** — add the tool name to `TOOL_GROUPS` in `src/index.ts` so it respects `SUPER_DEV_DISABLE`
+4. **README Quick Reference** — add to the Tools section in `README.md`
+5. **README Features** — add or update the extended description in the Features section of `README.md`
+6. **README Disabling Features** — update the feature group table if a new group is introduced
+
+## Checklist: New Prompt
+
+1. **Prompt file** — create a `.md` file in `prompts/`. The first `# Heading` becomes the command description.
+2. **Feature group** — add the prompt name (filename without `.md`) to `PROMPT_GROUPS` in `src/index.ts`
+3. **README Quick Reference** — add to the Slash Commands table in `README.md`
+4. **README Features** — add or update the extended description in the Features section of `README.md`
+5. **README Disabling Features** — update the feature group table if a new group is introduced
+
+## Checklist: New Feature Group
+
+1. **TOOL_GROUPS / PROMPT_GROUPS** — add mappings in `src/index.ts`
+2. **README Disabling Features** — add the group to the table in `README.md`
+3. **README Features** — add a new subsection with extended description
+
+## Tool Definition Shape
 
 ```ts
 import { z } from "zod";
@@ -29,7 +48,6 @@ async function myHandler(
   { projectRoot }: AppContext
 ): Promise<ToolResult> {
   const name = args.name as string;
-  // ... logic ...
   return ok(`Result: ${name}`);
 }
 
@@ -57,4 +75,5 @@ Tools are registered in three groups based on their needs:
 - Handler args are `Record<string, unknown>` — cast individual fields with `as`
 - Always return `ToolResult` via `ok()` or `err()` — never construct the shape manually
 - Tool names use `snake_case` (e.g., `spec_create`, `upstream_status`)
+- Prompt filenames use `kebab-case` (e.g., `spec-plan.md`, `design-review.md`)
 - Descriptions should be concise but include enough context for the AI agent to know when to use the tool
