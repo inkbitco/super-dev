@@ -1,20 +1,23 @@
-# Super Dev MCP
+<p align="center">
+  <img src=".github/logo.png" alt="Super Dev MCP" width="500">
+</p>
+<p align="center">
+  Give your dev workflow super powers.
+</p>
 
-Give your dev workflow super powers.
+An [MCP server](https://modelcontextprotocol.io/) that plugs into **Zed**, **Claude Desktop**, **Cursor**, or any MCP client, adding structured planning, deep code review, and design workflows on top of your AI coding agent.
 
-An [MCP server](https://modelcontextprotocol.io/) that plugs into **Zed**, **Claude Desktop**, **Cursor**, or any MCP client — adding structured planning, deep code review, and design workflows on top of your AI coding agent.
+🔨 **Spec-driven development**: go from idea to implementation with structured requirements → design → tasks phases
 
-🔨 **Spec-driven development** — go from idea to implementation with structured requirements → design → tasks phases
+🔍 **Code review**: senior-engineer-style review with web validation
 
-🔍 **Code review** — senior-engineer-style review with web validation
+🎨 **Design workflows**: build, refine, and review UI surfaces with design system memory
 
-🎨 **Design workflows** — build, refine, and review UI surfaces with design system memory
+🧵 **Conversation history**: search and reference past coding sessions
 
-🧵 **Conversation history** — search and reference past coding sessions
+🔊 **Voice mode**: hands-free TTS feedback with Siri neural voices (macOS)
 
-🔊 **Voice mode** — hands-free TTS feedback with Siri neural voices (macOS)
-
-🔀 **Upstream merges** — policy-based conflict resolution for forks
+🔀 **Upstream merges**: policy-based conflict resolution for forks
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -28,7 +31,7 @@ cd super-dev-mcp
 npm install
 ```
 
-That's it — `npm install` automatically builds the project.
+`npm install` automatically builds the project via the `prepare` script.
 
 ## Setup
 
@@ -58,7 +61,7 @@ Point the client at `run.sh`, or directly at `node /path/to/super-dev-mcp/dist/i
 The server determines which project it's operating on (in priority order):
 
 1. `SUPER_DEV_PROJECT_ROOT` env var
-2. MCP `roots/list` — asks the client for workspace roots
+2. MCP `roots/list`: asks the client for workspace roots
 3. `process.cwd()` fallback
 
 ### Disabling Features
@@ -97,22 +100,28 @@ All features are enabled by default. Disable what you don't need with the `SUPER
 | `/spec-plan` | Drive a requirements → design → tasks workflow with idea pressure-testing and web research |
 | `/spec-execute` | Orchestrate implementation using sub-agents for each task |
 | `/code-review` | Senior-engineer-style code review |
-| `/design` | Build new UI or refine existing — with design system setup built in |
+| `/design` | Build new UI or refine existing, with design system setup built in |
 | `/design-review` | Design director critique with heuristic scoring |
 | `/toggle-voice-mode` | Enable/disable TTS voice feedback |
 | `/upstream-merge` | Guided upstream merge workflow |
 
 ### Tools
 
-**Spec workflow** — `spec_create` · `spec_read` · `spec_status` · `spec_approve` · `spec_task_complete`
+| Tool | Purpose |
+|------|--------|
+| `spec_create` | Scaffold a new spec with requirements/design/tasks |
+| `spec_read` | Read a spec file (requirements, design, or tasks) |
+| `spec_status` | List all specs or get details on one |
+| `spec_approve` | Approve current phase and advance to the next |
+| `spec_task_complete` | Mark a task complete; parent tasks auto-commit |
+| `load_rules` | Load project rules from `.rules/` with glob-based auto-matching |
+| `thread_list` | List recent Zed agent conversation threads |
+| `thread_read` | Read a thread by ID with pagination and search |
+| `thread_search` | Full-text search across conversation content |
+| `voice_mode` | Toggle TTS with macOS speech synthesis |
+| `upstream_status` | Check upstream status, initialize config, or start a merge |
 
-**Rules** — `load_rules` — loads project rules from `.rules/` with glob-based auto-matching
-
-**Thread history** — `thread_list` · `thread_read` · `thread_search`
-
-**Voice mode** — `voice_mode` — toggle TTS with macOS speech synthesis
-
-**Upstream merge** — `upstream_status` (+ merge-resolution tools that appear during active merges)
+Upstream merge-resolution tools (`upstream_categorize_changes`, `upstream_resolve_file`, `upstream_resolve_batch`, `upstream_diff_file`, `upstream_verify`, `upstream_complete`, `upstream_abort`) appear only during active merges.
 
 ### Resources
 
@@ -126,11 +135,11 @@ Every rule in `.rules/` is exposed as a `rule://<name>` MCP Resource for clients
 
 Go from a rough idea to shipped code with structured phases and approval gates.
 
-1. **`/spec-plan`** — describe your feature. The agent pressure-tests the idea, does web research, and helps you think through edge cases before any code is written.
-2. **`spec_create`** — scaffolds `.specs/<feature>/` in your project with `requirements.md`, `design.md`, `tasks.md`, and `state.json`.
-3. **Requirements → Design → Tasks** — each phase must be explicitly approved before the next unlocks. The agent guides you through each one with phase-specific instructions.
-4. **`/spec-execute`** — orchestrates implementation by delegating tasks to sub-agents. The main thread stays clean for coordination while sub-agents do the coding.
-5. **Auto-commit** — when a parent task is marked complete, the agent automatically commits the work with a conventional commit message. Opt out per-spec with `autoCommit: false`.
+1. **`/spec-plan`**: describe your feature. The agent pressure-tests the idea, does web research, and helps you think through edge cases before any code is written.
+2. **`spec_create`**: scaffolds `.specs/<feature>/` in your project with `requirements.md`, `design.md`, `tasks.md`, and `state.json`.
+3. **Requirements → Design → Tasks**: each phase must be explicitly approved before the next unlocks. The agent guides you through each one with phase-specific instructions.
+4. **`/spec-execute`**: orchestrates implementation by delegating tasks to sub-agents. The main thread stays clean for coordination while sub-agents do the coding.
+5. **Auto-commit**: when a parent task is marked complete, the agent automatically commits the work with a conventional commit message. Opt out per-spec with `autoCommit: false`.
 
 Specs live in `.specs/<feature>/` in the consuming project (gitignored by default).
 
@@ -146,13 +155,13 @@ Run `/code-review` and point it at specific files, a git diff, unstaged changes,
 
 Two commands for building and evaluating UI:
 
-**`/design`** — the do-er. Tell it what you want to work on and it figures out the mode:
+**`/design`**: the do-er. Tell it what you want to work on and it figures out the mode:
 
-- **Build** — planning and implementing a new UI surface from scratch, with theme reasoning, color strategy, and layout decisions
-- **Refine** — push existing UI in a direction (bolder, quieter, refined, distill, better hierarchy, production-ready, and more)
-- **Design memory** — if `PRODUCT.md` or `DESIGN.md` don't exist in your project, it walks you through creating them first. These files capture your product's identity, brand personality, color palette, typography, and component patterns. Every subsequent design decision references them.
+- **Build**: planning and implementing a new UI surface from scratch, with theme reasoning, color strategy, and layout decisions
+- **Refine**: push existing UI in a direction (bolder, quieter, refined, distill, better hierarchy, production-ready, and more)
+- **Design memory**: if `PRODUCT.md` or `DESIGN.md` don't exist in your project, it walks you through creating them first. These files capture your product's identity, brand personality, color palette, typography, and component patterns. Every subsequent design decision references them.
 
-**`/design-review`** — the critic. Pure feedback, no code changes:
+**`/design-review`**: the critic. Pure feedback, no code changes:
 
 - AI slop detection (side-stripe borders, gradient text, glassmorphism, hero-metric templates, category-reflex palette choices)
 - Nielsen's 10 usability heuristics scored 0–4
@@ -190,9 +199,9 @@ The `load_rules` tool uses glob matching so the agent only receives rules releva
 
 Search and read past Zed agent threads directly from the agent panel. Useful for recovering context from previous sessions, finding where a decision was made, or referencing past work.
 
-- **`thread_list`** — browse recent threads with summaries, timestamps, and project folders. Filter by project.
-- **`thread_search`** — full-text search across conversation content (not just titles). Decompresses Zed's zstd-compressed thread data and searches the actual messages.
-- **`thread_read`** — read a specific thread. Large threads (20+ messages) return a table of contents first; use offset or search to navigate to specific sections. Supports message truncation to manage context usage.
+- **`thread_list`**: browse recent threads with summaries, timestamps, and project folders. Filter by project.
+- **`thread_search`**: full-text search across conversation content (not just titles). Decompresses Zed's zstd-compressed thread data and searches the actual messages.
+- **`thread_read`**: read a specific thread. Large threads (20+ messages) return a table of contents first; use offset or search to navigate to specific sections. Supports message truncation to manage context usage.
 
 ### Voice Mode
 
@@ -210,18 +219,18 @@ Configure via Zed settings env vars: `SUPER_DEV_VOICE` (voice name), `SUPER_DEV_
 
 For projects that fork or customize an upstream template repository. Run `/upstream-merge` to start a guided merge workflow.
 
-**Setup** — call `upstream_status` with `remote_url` to configure your upstream remote. Creates `.upstream.json` with:
+**Setup**: call `upstream_status` with `remote_url` to configure your upstream remote. Creates `.upstream.json` with:
 
-- **Policies** — files to `always_ours` (keep your version), `always_theirs` (take upstream), or `manual_review` (always stop and ask)
-- **Categories** — group files by type (dependencies, UI components, infrastructure) with glob patterns
+- **Policies**: files to `always_ours` (keep your version), `always_theirs` (take upstream), or `manual_review` (always stop and ask)
+- **Categories**: group files by type (dependencies, UI components, infrastructure) with glob patterns
 
 **Merge workflow:**
 
-1. **Assessment** — check how many commits you're behind, review what changed
-2. **Start merge** — creates a dedicated branch, identifies conflicts, categorizes all changed files
-3. **Resolution** — batch-resolve files with clear policies, then work through manual conflicts one by one with diffs and recommendations
-4. **Verification** — run typecheck, lint, and tests to validate the result
-5. **Complete** — commit, merge to target branch, clean up
+1. **Assessment**: check how many commits you're behind, review what changed
+2. **Start merge**: creates a dedicated branch, identifies conflicts, categorizes all changed files
+3. **Resolution**: batch-resolve files with clear policies, then work through manual conflicts one by one with diffs and recommendations
+4. **Verification**: run typecheck, lint, and tests to validate the result
+5. **Complete**: commit, merge to target branch, clean up
 
 Merge-resolution tools (`upstream_categorize_changes`, `upstream_resolve_file`, `upstream_resolve_batch`, `upstream_diff_file`, `upstream_verify`, `upstream_complete`, `upstream_abort`) are hidden until a merge is active, then disappear when it completes.
 
@@ -241,11 +250,11 @@ A few deliberate design choices:
 
 ## Extending
 
-**Add a slash command** — drop a `.md` file in `prompts/`. The first `# Heading` becomes the description.
+**Add a slash command**: drop a `.md` file in `prompts/`. The first `# Heading` becomes the description.
 
-**Add a tool** — create a module in `src/lib/`, export a `ToolDef[]` array, register in `src/index.ts`.
+**Add a tool**: create a module in `src/lib/`, export a `ToolDef[]` array, register in `src/index.ts`.
 
-**Add a rule** — create a `.md` file in your project's `.rules/` with YAML front-matter (see [Project Rules](#project-rules)).
+**Add a rule**: create a `.md` file in your project's `.rules/` with YAML front-matter (see [Project Rules](#project-rules)).
 
 ## Scripts
 
