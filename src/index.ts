@@ -274,7 +274,7 @@ if (isToolEnabled("spec_analyze")) {
     },
     async (args) => {
       await resolveProjectRoot();
-      return specAnalyze(args as Record<string, unknown>, ctx) as any;
+      return specAnalyze(args as { name: string }, ctx) as any;
     },
   );
   handle.disable();
