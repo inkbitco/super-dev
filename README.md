@@ -13,9 +13,9 @@ An [MCP server](https://modelcontextprotocol.io/) that plugs into **Zed**, **Cla
 
 🎨 **Design workflows**: build, refine, and review UI surfaces with design system memory
 
-🧵 **Conversation history**: search and reference past coding sessions
+🧵 **Conversation history**: search and reference past coding sessions (Zed only)
 
-🔊 **Voice mode**: hands-free TTS feedback with Siri neural voices (macOS)
+🔊 **Voice mode**: hands-free TTS feedback with Siri neural voices (Zed + macOS)
 
 🔀 **Upstream merges**: policy-based conflict resolution for forks
 
@@ -199,6 +199,8 @@ The `load_rules` tool uses glob matching so the agent only receives rules releva
 
 Search and read past Zed agent threads directly from the agent panel. Useful for recovering context from previous sessions, finding where a decision was made, or referencing past work.
 
+> **Zed + macOS only.** Reads directly from Zed's `threads.db` SQLite database with zstd decompression.
+
 - **`thread_list`**: browse recent threads with summaries, timestamps, and project folders. Filter by project.
 - **`thread_search`**: full-text search across conversation content (not just titles). Decompresses Zed's zstd-compressed thread data and searches the actual messages.
 - **`thread_read`**: read a specific thread. Large threads (20+ messages) return a table of contents first; use offset or search to navigate to specific sections. Supports message truncation to manage context usage.
@@ -206,6 +208,8 @@ Search and read past Zed agent threads directly from the agent panel. Useful for
 ### Voice Mode
 
 Hands-free TTS feedback using macOS speech synthesis. Run `/toggle-voice-mode` or call the `voice_mode` tool directly.
+
+> **Zed + macOS only.** Monitors Zed's conversation database and uses the macOS `say` command.
 
 - Uses the macOS `say` command with support for Siri neural voices (via the "system" voice option)
 - Spawns a detached watcher process that monitors Zed's conversation file for new agent responses
