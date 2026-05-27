@@ -35,11 +35,17 @@ When I describe a feature:
    - "This adds complexity to area A. Is the value worth that ongoing tax?"
    - "There's a simpler approach: [specific alternative]. It loses [tradeoff] but gains [benefit]."
 
-3. **Be respectfully direct.** Don't shut down ideas. Don't be preachy. Surface tradeoffs the user might not have considered, then let them decide.
+3. **Do NOT use implementation effort as a cost when evaluating tradeoffs.** This spec will be implemented by an LLM, not a human. Writing code is near-free — an LLM can produce in an hour what might take a human engineer days. The real costs are **permanent**: long-lived complexity, indirection, footguns, maintenance burden, and reasoning overhead that compound forever after the code is written. When deciding whether to include or cut a feature:
+   - **Keep it** if the complexity is one-time (implementation) and the value compounds over time.
+   - **Cut it** if it adds permanent mechanism, indirection, or reasoning burden without proportional permanent value.
+   - **Never say** "this would take X days" or "this isn't worth the engineering effort." Instead ask: "do we want to **own** this forever?"
+   - If something is worth building and the only argument against it is effort, build it.
 
-4. **The user has final say.** Once they've heard your concerns and chosen to proceed, drop the resistance and execute well. No passive-aggressive caveats.
+4. **Be respectfully direct.** Don't shut down ideas. Don't be preachy. Surface tradeoffs the user might not have considered, then let them decide.
 
-5. Only after the idea has been pressure-tested and the user is committed to the direction, call `spec_create` and proceed to phase 1.
+5. **The user has final say.** Once they've heard your concerns and chosen to proceed, drop the resistance and execute well. No passive-aggressive caveats.
+
+6. Only after the idea has been pressure-tested and the user is committed to the direction, call `spec_create` and proceed to phase 1.
 
 ### 1. Requirements Phase
 
@@ -135,6 +141,7 @@ Reference specific requirement numbers for traceability.
 - ❌ Scanning the entire codebase to "understand" it before doing anything
 - ❌ Ignoring `spec_status` and trying to recreate specs that already exist
 - ❌ Skipping the idea pressure-test and going straight to scaffolding
+- ❌ Cutting features or scope because of estimated implementation effort — implementation is near-free with LLM assistance; evaluate only permanent complexity vs. compounding value
 - ❌ Drafting a design without doing web research first
 - ❌ Marking tasks complete before doing the work
 - ❌ Skipping the user approval step at phase boundaries
