@@ -191,6 +191,48 @@ function speakNext(toSpeak: string): void {
   });
 }
 
+/** Returns true if the current thread's latest agent turn has active spawn_agent calls. */
+function hasActiveSubAgents(data: ThreadData): boolean {
+  const messages = data.messages || [];
+  const allParts: (string | ContentPart)[] = [];
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].User) break;
+    if (messages[i].Agent) {
+      allParts.unshift(...(messages[i].Agent!.content || []));
+    }
+  }
+
+  let toolUseCount = 0;
+  let toolResultCount = 0;
+  let hasSpawnAgent = false;
+
+  for (const part of allParts) {
+    if (typeof part !== "string") {
+      if (part.ToolUse) {
+        toolUseCount++;
+        const str = JSON.stringify(part.ToolUse);
+        if (str.includes("spawn_agent") || str.includes("delegate")) {
+          hasSpawnAgent = true;
+        }
+      }
+      if (part.ToolResult) {
+        toolResultCount++;
+      }
+    }
+  }
+
+  if (!hasSpawnAgent) return false;
+  if (toolUseCount > toolResultCount) return true; // tools still pending
+
+  // All tools resolved — only "done" if the turn ends with plain text
+  const lastPart = allParts[allParts.length - 1];
+  const endsWithText =
+    typeof lastPart === "string" ||
+    (typeof lastPart === "object" && "Text" in lastPart);
+  return !endsWithText;
+}
+
 function getAgentTurnText(data: ThreadData): string {
   const messages = data.messages || [];
 
@@ -341,6 +383,18 @@ function poll(): void {
   if (!latest) return;
 
   if (latest.id !== lastThreadId) {
+    // When SKIP_SUBAGENTS is on, don't switch away from a thread that has
+    // active sub-agents — the "new" latest thread is almost certainly one of them.
+    if (SKIP_SUBAGENTS && lastThreadId) {
+      const currentData = readThreadData(lastThreadId);
+      if (currentData && hasActiveSubAgents(currentData)) {
+        log(
+          `Skipping thread switch to "${latest.summary}" — current thread has active sub-agents`,
+        );
+        return;
+      }
+    }
+
     lastThreadId = latest.id;
     const data = readThreadData(latest.id);
     if (data) {
